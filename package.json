@@ -1,0 +1,37 @@
+{
+  "name": "mojing",
+  "version": "1.0.0",
+  "description": "墨境·高概念网文AI创作引擎",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64",
+    "pack": "electron-builder --dir"
+  },
+  "author": "小牛",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "28.3.3",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "ai.mojing.app",
+    "productName": "墨境",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "public/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "publish": null
+  }
+}

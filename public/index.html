@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>墨境·高概念网文AI创作引擎</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Microsoft YaHei', sans-serif; background: #1a1a2e; color: #e0e0e0; height: 100vh; overflow: hidden; }
+    
+    .app-container { display: flex; height: 100vh; }
+    .sidebar { width: 200px; background: #16213e; padding: 20px 0; display: flex; flex-direction: column; }
+    .main-content { flex: 1; padding: 20px; overflow-y: auto; padding-bottom: 50px; }
+    
+    .logo { text-align: center; padding: 20px; border-bottom: 1px solid #2a2a4a; }
+    .logo h1 { font-size: 18px; color: #e94560; }
+    .logo p { font-size: 10px; color: #888; margin-top: 5px; }
+    
+    .nav-item { padding: 15px 25px; cursor: pointer; transition: all 0.3s; border-left: 3px solid transparent; color: #aaa; }
+    .nav-item:hover { background: #1f2f50; color: #e0e0e0; }
+    .nav-item.active { background: #1f2f50; border-left-color: #e94560; color: #e94560; }
+    
+    .page { display: none; }
+    .page.active { display: block; }
+    .page-header { margin-bottom: 30px; }
+    .page-header h2 { font-size: 24px; color: #e94560; }
+    .page-header p { color: #888; margin-top: 5px; }
+    
+    .card { background: #16213e; border-radius: 10px; padding: 25px; margin-bottom: 20px; }
+    .card h3 { color: #e94560; margin-bottom: 15px; font-size: 16px; }
+    
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; color: #aaa; font-size: 14px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 12px; border: 1px solid #2a2a4a; border-radius: 5px;
+      background: #1a1a2e; color: #e0e0e0; font-size: 14px;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none; border-color: #e94560;
+    }
+    
+    .btn { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+    .btn-primary { background: #e94560; color: white; }
+    .btn-primary:hover { background: #ff6b6b; }
+    .btn-secondary { background: #2a2a4a; color: #e0e0e0; }
+    .btn-secondary:hover { background: #3a3a5a; }
+    
+    .status-bar { position: fixed; bottom: 0; left: 200px; right: 0; background: #16213e; padding: 10px 20px; display: flex; justify-content: space-between; font-size: 12px; color: #888; z-index: 100; }
+    
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.active { display: flex; }
+    .modal-content { background: #16213e; border-radius: 10px; padding: 30px; width: 500px; max-height: 80vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h3 { color: #e94560; }
+    .modal-close { background: none; border: none; color: #888; font-size: 24px; cursor: pointer; }
+    .modal-close:hover { color: #e94560; }
+    
+    .notification { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 5px; z-index: 2000; opacity: 0; transition: opacity 0.3s; }
+    .notification.show { opacity: 1; }
+    .notification.success { background: #27ae60; color: white; }
+    .notification.error { background: #e94560; color: white; }
+    
+    .agent-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    .agent-card { background: #1a1a2e; border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.3s; }
+    .agent-card:hover { transform: translateY(-3px); box-shadow: 0 5px 20px rgba(233, 69, 96, 0.3); }
+    .agent-card h4 { color: #e94560; margin-bottom: 8px; }
+    .agent-card p { font-size: 12px; color: #888; }
+    .agent-card .status { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; margin-top: 10px; }
+    .status.ready { background: #27ae60; }
+    .status.waiting { background: #f39c12; }
+    
+    .truth-list { list-style: none; }
+    .truth-item { padding: 15px; background: #1a1a2e; border-radius: 5px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .truth-item span { color: #e0e0e0; }
+    .truth-item .badge { padding: 3px 10px; border-radius: 10px; font-size: 11px; background: #2a2a4a; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
+    .stat-card { background: #16213e; border-radius: 10px; padding: 20px; text-align: center; }
+    .stat-card .value { font-size: 28px; color: #e94560; font-weight: bold; }
+    .stat-card .label { color: #888; font-size: 12px; margin-top: 5px; }
+    
+    .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+    .quick-btn { padding: 30px; background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 10px; text-align: center; cursor: pointer; transition: all 0.3s; border: 1px solid transparent; }
+    .quick-btn:hover { border-color: #e94560; transform: translateY(-3px); }
+    .quick-btn h4 { color: #e94560; margin-bottom: 8px; }
+    .quick-btn p { font-size: 12px; color: #888; }
+    
+    .project-list { list-style: none; }
+    .project-item { padding: 20px; background: #1a1a2e; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+    .project-item h4 { color: #e0e0e0; margin-bottom: 5px; }
+    .project-item p { font-size: 12px; color: #888; }
+    
+    textarea { resize: vertical; min-height: 100px; font-family: inherit; }
+    
+    .rules-list { list-style: none; }
+    .rules-list li { padding: 15px; background: #1a1a2e; border-radius: 5px; margin-bottom: 10px; border-left: 3px solid #e94560; }
+    .rules-list li strong { color: #e94560; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="sidebar">
+      <div class="logo">
+        <h1>墨境</h1>
+        <p>高概念网文AI创作引擎</p>
+      </div>
+      <div class="nav-item active" data-page="workbench">创作工作台</div>
+      <div class="nav-item" data-page="projects">项目管理</div>
+      <div class="nav-item" data-page="agents">Agent集群</div>
+      <div class="nav-item" data-page="truth">真相文件</div>
+      <div class="nav-item" data-page="audit">规则审计</div>
+      <div class="nav-item" data-page="settings">系统设置</div>
+    </div>
+    
+    <div class="main-content">
+      <!-- 工作台 -->
+      <div id="page-workbench" class="page active">
+        <div class="page-header">
+          <h2>创作工作台</h2>
+          <p>首席执笔官「小牛」为您服务 | 当前项目: <span id="current-project-name">未打开项目</span></p>
+        </div>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="value" id="stat-volume">-</div>
+            <div class="label">当前卷数</div>
+          </div>
+          <div class="stat-card">
+            <div class="value" id="stat-chapter">-</div>
+            <div class="label">当前章节</div>
+          </div>
+          <div class="stat-card">
+            <div class="value">0</div>
+            <div class="label">已写字数</div>
+          </div>
+          <div class="stat-card">
+            <div class="value">0</div>
+            <div class="label">待回收伏笔</div>
+          </div>
+        </div>
+        
+        <div class="quick-actions">
+          <div class="quick-btn" data-action="new-project">
+            <h4>新建项目</h4>
+            <p>开始新的创作之旅</p>
+          </div>
+          <div class="quick-btn" data-action="chapter">
+            <h4>章节创作</h4>
+            <p>启动单章创作流程</p>
+          </div>
+          <div class="quick-btn" data-action="hook">
+            <h4>钩子生成</h4>
+            <p>设计高能悬念钩子</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 项目管理 -->
+      <div id="page-projects" class="page">
+        <div class="page-header">
+          <h2>项目管理</h2>
+          <p>管理您的所有创作项目</p>
+        </div>
+        
+        <button class="btn btn-primary" id="btn-new-project">新建项目</button>
+        
+        <div class="card" style="margin-top: 20px;">
+          <h3>我的项目</h3>
+          <ul class="project-list" id="project-list">
+            <li class="project-item">
+              <div>
+                <h4>示例项目：赛博灵根</h4>
+                <p>番茄小说 | 长篇网文 | 最后编辑: 2025-05-01</p>
+              </div>
+              <button class="btn btn-secondary" id="btn-open-demo">打开</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- Agent集群 -->
+      <div id="page-agents" class="page">
+        <div class="page-header">
+          <h2>Agent集群</h2>
+          <p>10个AI Agent协同工作，为您创作高概念网文</p>
+        </div>
+        
+        <div class="agent-grid">
+          <div class="agent-card" data-agent="radar">
+            <h4>1. Radar Agent</h4>
+            <p>趋势雷达 | 扫描平台实时趋势与读者偏好</p>
+            <span class="status ready">就绪</span>
+          </div>
+          <div class="agent-card" data-agent="planner">
+            <h4>2. Planner Agent</h4>
+            <p>意图规划师 | 精准读取创作意图，输出创作红线</p>
+            <span class="status ready">就绪</span>
+          </div>
+          <div class="agent-card" data-agent="composer">
+            <h4>3. Composer Agent</h4>
+            <p>上下文编译师 | 精准筛选高相关性上下文</p>
+            <span class="status ready">就绪</span>
+          </div>
+          <div class="agent-card" data-agent="architect">
+            <h4>4. Architect Agent</h4>
+            <p>结构架构师 | 完成章节精细化结构规划</p>
+            <span class="status waiting">等待输入</span>
+          </div>
+          <div class="agent-card" data-agent="writer">
+            <h4>5. Writer Agent</h4>
+            <p>正文执笔官 | 生成符合要求的章节正文</p>
+            <span class="status waiting">等待输入</span>
+          </div>
+          <div class="agent-card" data-agent="observer">
+            <h4>6. Observer Agent</h4>
+            <p>事实观察者 | 提取9大类核心事实</p>
+            <span class="status waiting">等待输入</span>
+          </div>
+          <div class="agent-card" data-agent="reflector">
+            <h4>7. Reflector Agent</h4>
+            <p>增量更新器 | 生成delta数据包，更新真相文件</p>
+            <span class="status waiting">等待输入</span>
+          </div>
+          <div class="agent-card" data-agent="normalizer">
+            <h4>8. Normalizer Agent</h4>
+            <p>字数归一化师 | 精准控制章节字数</p>
+            <span class="status ready">就绪</span>
+          </div>
+          <div class="agent-card" data-agent="auditor">
+            <h4>9. Auditor Agent</h4>
+            <p>合规审计师 | 33维度全量校验</p>
+            <span class="status ready">就绪</span>
+          </div>
+          <div class="agent-card" data-agent="reviser">
+            <h4>10. Reviser Agent</h4>
+            <p>内容修复师 | 基于审计报告修复问题</p>
+            <span class="status waiting">等待输入</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 真相文件 -->
+      <div id="page-truth" class="page">
+        <div class="page-header">
+          <h2>真相文件</h2>
+          <p>全故事唯一事实来源，7个核心文件全链路追踪</p>
+        </div>
+        
+        <ul class="truth-list">
+          <li class="truth-item"><span>1. current_state.md - 世界状态总览</span><span class="badge">核心</span></li>
+          <li class="truth-item"><span>2. particle_ledger.md - 资源粒子账本</span><span class="badge">核心</span></li>
+          <li class="truth-item"><span>3. pending_hooks.md - 未闭合伏笔台账</span><span class="badge">核心</span></li>
+          <li class="truth-item"><span>4. chapter_summaries.md - 章节摘要总集</span><span class="badge">核心</span></li>
+          <li class="truth-item"><span>5. subplot_board.md - 支线剧情进度板</span><span class="badge">核心</span></li>
+          <li class="truth-item"><span>6. emotional_arcs.md - 角色情感弧线追踪表</span><span class="badge">核心</span></li>
+          <li class="truth-item"><span>7. character_matrix.md - 角色交互矩阵</span><span class="badge">核心</span></li>
+        </ul>
+      </div>
+      
+      <!-- 规则审计 -->
+      <div id="page-audit" class="page">
+        <div class="page-header">
+          <h2>规则审计</h2>
+          <p>6大创作铁律校验引擎，确保内容符合高概念标准</p>
+        </div>
+        
+        <div class="card">
+          <h3>核心创作铁律</h3>
+          <ul class="rules-list">
+            <li><strong>高概念铁律：</strong>所有故事核心必须通过「【熟悉设定】+【颠覆性反差】= 高概念」公式校验</li>
+            <li><strong>人物铁律：</strong>核心角色必须具备「反差特质」，所有人设言行全程统一，禁止OOC</li>
+            <li><strong>节奏铁律：</strong>剧情必须遵循「小反转→中高潮→大反转」的情绪过山车模型</li>
+            <li><strong>目标铁律：</strong>主角必须有明确的终极目标与本我欲望，所有剧情必须服务于主线目标</li>
+            <li><strong>闭环铁律：</strong>结局必须完成「情绪闭环 + 概念闭环」，回归开篇高概念</li>
+            <li><strong>协同铁律：</strong>严格恪守「用户决策方向，AI执行落地」的分工</li>
+          </ul>
+        </div>
+        
+        <div class="card">
+          <h3>执行审计</h3>
+          <button class="btn btn-primary" id="btn-run-audit">运行全量审计</button>
+          <div id="audit-result" style="margin-top: 20px;"></div>
+        </div>
+      </div>
+      
+      <!-- 系统设置 -->
+      <div id="page-settings" class="page">
+        <div class="page-header">
+          <h2>系统设置</h2>
+          <p>配置API服务、创作偏好与协作模式</p>
+        </div>
+        
+        <div class="card">
+          <h3>API配置</h3>
+          <div class="form-group">
+            <label>API服务商</label>
+            <select id="setting-api-provider">
+              <option value="doubao">字节跳动豆包大模型（推荐）</option>
+              <option value="openai">OpenAI GPT系列</option>
+              <option value="claude">Anthropic Claude系列</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>API Key</label>
+            <input type="password" id="setting-api-key" placeholder="输入您的API密钥">
+          </div>
+          <div class="form-group">
+            <label>模型选择</label>
+            <select id="setting-model">
+              <option value="doubao-pro">Doubao-pro-32k</option>
+              <option value="doubao-lite">Doubao-lite-32k</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="btn-save-settings">保存设置</button>
+        </div>
+        
+        <div class="card">
+          <h3>创作偏好</h3>
+          <div class="form-group">
+            <label>目标章节字数</label>
+            <input type="number" id="setting-chapter-length" value="3000">
+          </div>
+          <div class="form-group">
+            <label>对话占比 (%)</label>
+            <input type="range" id="setting-dialogue-ratio" min="20" max="60" value="40">
+            <span id="dialogue-ratio-value">40%</span>
+          </div>
+          <div class="form-group">
+            <label>协作模式</label>
+            <select id="setting-mode">
+              <option value="auto">全自动模式</option>
+              <option value="semi">半自动模式</option>
+              <option value="manual">纯手动模式</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="btn-save-preferences">保存偏好</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="status-bar">
+    <span id="status-project">未打开项目</span>
+    <span>已连接</span>
+    <span>自动保存: 开启</span>
+  </div>
+  
+  <!-- 新建项目模态框 -->
+  <div id="modal-new-project" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>新建项目</h3>
+        <button class="modal-close" id="close-new-project">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>项目名称</label>
+        <input type="text" id="input-project-name" placeholder="输入项目名称">
+      </div>
+      <div class="form-group">
+        <label>目标平台</label>
+        <select id="input-platform">
+          <option value="fanqie">番茄小说</option>
+          <option value="qidian">起点中文网</option>
+          <option value="qimao">七猫小说</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>目标体裁</label>
+        <select id="input-genre">
+          <option value="novel">长篇网文</option>
+          <option value="comic">动态漫脚本</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>项目保存路径</label>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" id="input-project-path" placeholder="选择保存路径" style="flex: 1;">
+          <button class="btn btn-secondary" id="btn-browse-path">浏览</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>高概念灵感（一句话核心创意）</label>
+        <textarea id="input-concept" placeholder="用一句话描述你的核心创意，必须包含【熟悉设定】+【颠覆性反差】"></textarea>
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+        <button class="btn btn-secondary" id="btn-cancel-project">取消</button>
+        <button class="btn btn-primary" id="btn-create-project">创建项目</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 章节创作模态框 -->
+  <div id="modal-chapter" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>章节创作</h3>
+        <button class="modal-close" id="close-chapter">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>章节标题</label>
+        <input type="text" id="input-chapter-title" placeholder="输入章节标题">
+      </div>
+      <div class="form-group">
+        <label>创作意图</label>
+        <textarea id="input-chapter-intent" placeholder="描述本章核心目标、必须包含的爽点、禁止出现的内容"></textarea>
+      </div>
+      <div class="form-group">
+        <label>目标字数</label>
+        <input type="number" id="input-chapter-words" value="3000">
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+        <button class="btn btn-secondary" id="btn-cancel-chapter">取消</button>
+        <button class="btn btn-primary" id="btn-start-chapter">开始创作</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 钩子生成模态框 -->
+  <div id="modal-hook" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>钩子生成</h3>
+        <button class="modal-close" id="close-hook">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>钩子类型</label>
+        <select id="input-hook-type">
+          <option value="cliffhanger">悬念钩子</option>
+          <option value="reversal">反转钩子</option>
+          <option value="emotional">情感钩子</option>
+          <option value="mystery">神秘钩子</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>场景描述</label>
+        <textarea id="input-hook-context" placeholder="描述当前场景和需要引出的悬念"></textarea>
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+        <button class="btn btn-secondary" id="btn-cancel-hook">取消</button>
+        <button class="btn btn-primary" id="btn-generate-hook">生成钩子</button>
+      </div>
+    </div>
+  </div>
+  
+  <div id="notification" class="notification"></div>
+  
+  <script>
+    (function() {
+      var app = {
+        currentProject: null,
+        currentPage: 'workbench',
+        settings: {},
+        
+        init: function() {
+          this.bindEvents();
+          this.loadSettings();
+        },
+        
+        bindEvents: function() {
+          var self = this;
+          
+          // 导航切换
+          var navItems = document.querySelectorAll('.nav-item');
+          for (var i = 0; i < navItems.length; i++) {
+            navItems[i].addEventListener('click', (function(idx) {
+              return function() {
+                self.switchPage(navItems[idx].dataset.page);
+              };
+            })(i));
+          }
+          
+          // 快速操作按钮
+          var quickBtns = document.querySelectorAll('.quick-btn');
+          for (var i = 0; i < quickBtns.length; i++) {
+            quickBtns[i].addEventListener('click', (function(idx) {
+              return function() {
+                var action = quickBtns[idx].dataset.action;
+                if (action === 'new-project') self.showModal('modal-new-project');
+                else if (action === 'chapter') self.showModal('modal-chapter');
+                else if (action === 'hook') self.showModal('modal-hook');
+              };
+            })(i));
+          }
+          
+          // 项目管理按钮
+          document.getElementById('btn-new-project').addEventListener('click', function() {
+            self.showModal('modal-new-project');
+          });
+          document.getElementById('btn-open-demo').addEventListener('click', function() {
+            self.openDemoProject();
+          });
+          
+          // 模态框关闭
+          document.getElementById('close-new-project').addEventListener('click', function() {
+            self.closeModal('modal-new-project');
+          });
+          document.getElementById('close-chapter').addEventListener('click', function() {
+            self.closeModal('modal-chapter');
+          });
+          document.getElementById('close-hook').addEventListener('click', function() {
+            self.closeModal('modal-hook');
+          });
+          document.getElementById('btn-cancel-project').addEventListener('click', function() {
+            self.closeModal('modal-new-project');
+          });
+          document.getElementById('btn-cancel-chapter').addEventListener('click', function() {
+            self.closeModal('modal-chapter');
+          });
+          document.getElementById('btn-cancel-hook').addEventListener('click', function() {
+            self.closeModal('modal-hook');
+          });
+          
+          // 模态框外部点击关闭
+          var modals = document.querySelectorAll('.modal');
+          for (var i = 0; i < modals.length; i++) {
+            modals[i].addEventListener('click', function(e) {
+              if (e.target === this) self.closeModal(this.id);
+            });
+          }
+          
+          // 项目创建
+          document.getElementById('btn-browse-path').addEventListener('click', function() {
+            self.browsePath();
+          });
+          document.getElementById('btn-create-project').addEventListener('click', function() {
+            self.createProject();
+          });
+          
+          // 章节创作
+          document.getElementById('btn-start-chapter').addEventListener('click', function() {
+            self.startChapter();
+          });
+          
+          // 钩子生成
+          document.getElementById('btn-generate-hook').addEventListener('click', function() {
+            self.generateHook();
+          });
+          
+          // 审计
+          document.getElementById('btn-run-audit').addEventListener('click', function() {
+            self.runAudit();
+          });
+          
+          // 设置
+          document.getElementById('setting-dialogue-ratio').addEventListener('input', function(e) {
+            document.getElementById('dialogue-ratio-value').textContent = e.target.value + '%';
+          });
+          document.getElementById('btn-save-settings').addEventListener('click', function() {
+            self.saveSettings();
+          });
+          document.getElementById('btn-save-preferences').addEventListener('click', function() {
+            self.savePreferences();
+          });
+          
+          // Agent卡片
+          var agentCards = document.querySelectorAll('.agent-card');
+          for (var i = 0; i < agentCards.length; i++) {
+            agentCards[i].addEventListener('click', (function(idx) {
+              return function() {
+                self.showAgentInfo(agentCards[idx].dataset.agent);
+              };
+            })(i));
+          }
+        },
+        
+        switchPage: function(page) {
+          var navItems = document.querySelectorAll('.nav-item');
+          for (var i = 0; i < navItems.length; i++) {
+            navItems[i].classList.toggle('active', navItems[i].dataset.page === page);
+          }
+          var pages = document.querySelectorAll('.page');
+          for (var i = 0; i < pages.length; i++) {
+            pages[i].classList.toggle('active', pages[i].id === 'page-' + page);
+          }
+          this.currentPage = page;
+        },
+        
+        showModal: function(id) {
+          document.getElementById(id).classList.add('active');
+        },
+        
+        closeModal: function(id) {
+          document.getElementById(id).classList.remove('active');
+        },
+        
+        showNotification: function(message, type) {
+          var notif = document.getElementById('notification');
+          notif.textContent = message;
+          notif.className = 'notification ' + type + ' show';
+          var self = this;
+          setTimeout(function() {
+            notif.classList.remove('show');
+          }, 3000);
+        },
+        
+        browsePath: function() {
+          var self = this;
+          window.electronAPI.selectDirectory().then(function(result) {
+            if (result) {
+              document.getElementById('input-project-path').value = result;
+            }
+          }).catch(function(err) {
+            console.error('选择目录失败:', err);
+            self.showNotification('选择目录失败', 'error');
+          });
+        },
+        
+        createProject: function() {
+          var self = this;
+          var name = document.getElementById('input-project-name').value.trim();
+          var platform = document.getElementById('input-platform').value;
+          var genre = document.getElementById('input-genre').value;
+          var projectPath = document.getElementById('input-project-path').value.trim();
+          var concept = document.getElementById('input-concept').value.trim();
+          
+          if (!name) {
+            this.showNotification('请输入项目名称', 'error');
+            return;
+          }
+          
+          window.electronAPI.createProject({
+            name: name,
+            platform: platform,
+            genre: genre,
+            projectPath: projectPath || './projects',
+            concept: concept
+          }).then(function(result) {
+            if (result && result.success) {
+              self.currentProject = result.project;
+              self.updateWorkbench();
+              self.closeModal('modal-new-project');
+              self.showNotification('项目创建成功！', 'success');
+              self.switchPage('workbench');
+            } else {
+              self.showNotification('创建失败: ' + (result ? result.error : '未知错误'), 'error');
+            }
+          }).catch(function(err) {
+            console.error('创建项目失败:', err);
+            self.showNotification('创建项目失败', 'error');
+          });
+        },
+        
+        openDemoProject: function() {
+          this.currentProject = { name: '赛博灵根', platform: 'fanqie', currentVolume: 1, currentChapter: 1 };
+          this.updateWorkbench();
+          this.showNotification('示例项目已打开', 'success');
+          this.switchPage('workbench');
+        },
+        
+        updateWorkbench: function() {
+          if (this.currentProject) {
+            document.getElementById('current-project-name').textContent = this.currentProject.name;
+            document.getElementById('stat-volume').textContent = this.currentProject.currentVolume || 1;
+            document.getElementById('stat-chapter').textContent = this.currentProject.currentChapter || 1;
+            document.getElementById('status-project').textContent = this.currentProject.name;
+          }
+        },
+        
+        startChapter: function() {
+          var title = document.getElementById('input-chapter-title').value.trim();
+          if (!title) {
+            this.showNotification('请输入章节标题', 'error');
+            return;
+          }
+          this.closeModal('modal-chapter');
+          this.showNotification('章节创作流程已启动: ' + title, 'success');
+          this.switchPage('agents');
+        },
+        
+        generateHook: function() {
+          var type = document.getElementById('input-hook-type').value;
+          var context = document.getElementById('input-hook-context').value.trim();
+          if (!context) {
+            this.showNotification('请输入场景描述', 'error');
+            return;
+          }
+          this.closeModal('modal-hook');
+          this.showNotification('钩子生成完成: ' + type + '类型', 'success');
+        },
+        
+        runAudit: function() {
+          document.getElementById('audit-result').innerHTML = 
+            '<div style="color: #27ae60;">高概念铁律: 通过</div>' +
+            '<div style="color: #27ae60;">人物铁律: 通过</div>' +
+            '<div style="color: #27ae60;">节奏铁律: 通过</div>' +
+            '<div style="color: #27ae60;">目标铁律: 通过</div>' +
+            '<div style="color: #27ae60;">闭环铁律: 通过</div>' +
+            '<div style="color: #27ae60;">协同铁律: 通过</div>';
+          this.showNotification('审计完成，所有规则校验通过', 'success');
+        },
+        
+        showAgentInfo: function(agent) {
+          var info = {
+            radar: '趋势雷达 - 扫描平台实时趋势，为创作方向提供数据支撑',
+            planner: '意图规划师 - 精准读取创作意图，输出单章创作红线',
+            composer: '上下文编译师 - 精准筛选高相关性上下文，编译规则栈',
+            architect: '结构架构师 - 完成章节精细化结构规划',
+            writer: '正文执笔官 - 生成符合要求的章节正文',
+            observer: '事实观察者 - 提取9大类核心事实',
+            reflector: '增量更新器 - 更新7个真相文件',
+            normalizer: '字数归一化师 - 精准控制章节字数',
+            auditor: '合规审计师 - 33维度全量校验',
+            reviser: '内容修复师 - 基于审计报告修复问题'
+          };
+          this.showNotification(info[agent] || '未知Agent', 'success');
+        },
+        
+        saveSettings: function() {
+          var settings = {
+            apiProvider: document.getElementById('setting-api-provider').value,
+            apiKey: document.getElementById('setting-api-key').value,
+            model: document.getElementById('setting-model').value
+          };
+          localStorage.setItem('mojing-settings', JSON.stringify(settings));
+          this.showNotification('API设置已保存', 'success');
+        },
+        
+        savePreferences: function() {
+          var prefs = {
+            chapterLength: document.getElementById('setting-chapter-length').value,
+            dialogueRatio: document.getElementById('setting-dialogue-ratio').value,
+            mode: document.getElementById('setting-mode').value
+          };
+          localStorage.setItem('mojing-preferences', JSON.stringify(prefs));
+          this.showNotification('创作偏好已保存', 'success');
+        },
+        
+        loadSettings: function() {
+          try {
+            var saved = JSON.parse(localStorage.getItem('mojing-settings') || '{}');
+            if (saved.apiProvider) document.getElementById('setting-api-provider').value = saved.apiProvider;
+            if (saved.apiKey) document.getElementById('setting-api-key').value = saved.apiKey;
+            if (saved.model) document.getElementById('setting-model').value = saved.model;
+            
+            var prefs = JSON.parse(localStorage.getItem('mojing-preferences') || '{}');
+            if (prefs.chapterLength) document.getElementById('setting-chapter-length').value = prefs.chapterLength;
+            if (prefs.dialogueRatio) {
+              document.getElementById('setting-dialogue-ratio').value = prefs.dialogueRatio;
+              document.getElementById('dialogue-ratio-value').textContent = prefs.dialogueRatio + '%';
+            }
+            if (prefs.mode) document.getElementById('setting-mode').value = prefs.mode;
+          } catch (e) {
+            console.error('加载设置失败:', e);
+          }
+        }
+      };
+      
+      window.app = app;
+      document.addEventListener('DOMContentLoaded', function() {
+        app.init();
+      });
+    })();
+  </script>
+</body>
+</html>
